@@ -1,0 +1,14 @@
+{
+  "name": "pacman-webgl-game",
+  "version": "1.0.0",
+  "description": "Pac-Man game using WebGL",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "keywords": ["pacman", "webgl", "game"],
+  "author": "",
+  "license": "ISC"
+}
+
