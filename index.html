@@ -1,23 +1,233 @@
-<!-- HTML setup -->
-<!DOCTYPE html> 
-<html>
+<!DOCTYPE html>
+<html lang="en">
 <head>
-<meta charset="utf-8" />
-<title>PacMan Game :DDDD</title>
-<style>
-canvas { border: 1px solid black; display: block; margin: 20px auto; }
-</style>
-</head
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pac-Man WebGL</title>
+    <link rel="stylesheet" href="style.css">
+</head>
 <body>
-    <canvas id="glcanvas" width="1000" height="1000" "></canvas> <!--change size later-->
-    <script id="vertex-shader" type="xshader/x-vertex">
-        attribute vec4 aPosition;
-        gl_Position = aPosition; 
-    </script>
-    <script id="fragment-shader" type="xshader/x-fragment">
-        precision mediump float;
-        gl_FragColor = vec4(0.0, 0.5, 0.5, 1.0); 
-    </script>
-<!--script src="_______"></script-->
+    <!-- Start Screen -->
+    <div id="start-screen" class="start-screen">
+        <div class="start-content">
+            <h1 class="game-title">PAC-MAN</h1>
+            <div class="title-decoration">●●●●●</div>
+            
+            <div class="start-buttons">
+                <button id="start-btn" class="btn btn-primary">START GAME</button>
+                <button id="how-to-play-btn" class="btn btn-secondary">HOW TO PLAY</button>
+            </div>
+            
+            <!-- Customization Modal (for How to Play) -->
+            <div id="customize-modal" class="modal">
+                <div class="modal-content">
+                    <span class="close-modal">&times;</span>
+                    <h2>Customize Pac-Man</h2>
+                    <div class="customize-form">
+                        <div class="control-group">
+                            <label>🎨 Color</label>
+                            <div class="color-presets">
+                                <button class="color-btn" data-color="#ffff00" style="background: #ffff00;"></button>
+                                <button class="color-btn" data-color="#ff0000" style="background: #ff0000;"></button>
+                                <button class="color-btn" data-color="#00ff00" style="background: #00ff00;"></button>
+                                <button class="color-btn" data-color="#0000ff" style="background: #0000ff;"></button>
+                                <button class="color-btn" data-color="#ff00ff" style="background: #ff00ff;"></button>
+                                <button class="color-btn" data-color="#00ffff" style="background: #00ffff;"></button>
+                                <button class="color-btn" data-color="#ffa500" style="background: #ffa500;"></button>
+                                <button class="color-btn" data-color="#ffffff" style="background: #ffffff;"></button>
+                            </div>
+                            <button id="custom-color-btn" class="btn-custom-color">🎨 Custom Color</button>
+                            <input type="color" id="pacman-color" value="#ffff00" style="display: none;">
+                        </div>
+                        <div class="control-group">
+                            <label>📏 Size: <span id="size-value">1.0</span></label>
+                            <input type="range" id="pacman-size" min="0.5" max="2.0" step="0.1" value="1.0">
+                        </div>
+                        <div class="control-group">
+                            <label>🔷 Shape</label>
+                            <select id="pacman-shape">
+                                <option value="normal">Normal</option>
+                                <option value="wide">Wide</option>
+                                <option value="tall">Tall</option>
+                            </select>
+                        </div>
+                        <button id="save-customize" class="btn btn-primary">SAVE</button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- How to Play Modal -->
+            <div id="how-to-play-modal" class="modal">
+                <div class="modal-content">
+                    <span class="close-modal">&times;</span>
+                    <h2>How to Play</h2>
+                    <div class="instructions">
+                        <div class="instruction-item">
+                            <strong>🎮 Controls:</strong>
+                            <p>Use Arrow Keys (↑ ↓ ← →) to move Pac-Man</p>
+                        </div>
+                        <div class="instruction-item">
+                            <strong>🎯 Objective:</strong>
+                            <p>Collect all pellets to score points before time runs out!</p>
+                        </div>
+                        <div class="instruction-item">
+                            <strong>⭐ Scoring:</strong>
+                            <p>• Regular Pellets: 10 points<br>• Power Pellets: 50 points</p>
+                        </div>
+                        <div class="instruction-item">
+                            <strong>⏱️ Timer:</strong>
+                            <p>You have 60 seconds to collect as many pellets as possible!</p>
+                        </div>
+                        <div class="instruction-item">
+                            <strong>🎨 Customization:</strong>
+                            <p>Customize Pac-Man's appearance before starting the game!</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Customization Screen (shown after Start) -->
+    <div id="customize-screen" class="customize-screen" style="display: none;">
+        <div class="customize-content">
+            <h2 class="selection-title">CUSTOMIZE PAC-MAN</h2>
+            <div class="customize-options">
+                <button class="customize-option-btn" data-option="color">
+                    <span class="customize-icon color-icon"></span>
+                    <span class="customize-label">COLOR</span>
+                </button>
+                <button id="continue-from-customize" class="customize-option-btn continue-btn">
+                    <span class="customize-icon continue-icon"></span>
+                    <span class="customize-label">CONTINUE</span>
+                </button>
+            </div>
+            <button id="back-from-customize" class="btn btn-secondary" style="margin-top: 20px;">BACK</button>
+        </div>
+        
+        <!-- Color Selection Submenu -->
+        <div id="color-submenu" class="customize-submenu" style="display: none;">
+            <h3 class="submenu-title">CHOOSE COLOR</h3>
+            <div class="color-options-grid">
+                <button class="color-option-btn" data-color="#ffff00">
+                    <span class="color-preview" style="background: #ffff00;"></span>
+                    <span class="color-label">YELLOW</span>
+                </button>
+                <button class="color-option-btn" data-color="#ff0000">
+                    <span class="color-preview" style="background: #ff0000;"></span>
+                    <span class="color-label">RED</span>
+                </button>
+                <button class="color-option-btn" data-color="#00ff00">
+                    <span class="color-preview" style="background: #00ff00;"></span>
+                    <span class="color-label">GREEN</span>
+                </button>
+                <button class="color-option-btn" data-color="#0000ff">
+                    <span class="color-preview" style="background: #0000ff;"></span>
+                    <span class="color-label">BLUE</span>
+                </button>
+                <button class="color-option-btn" data-color="#ff00ff">
+                    <span class="color-preview" style="background: #ff00ff;"></span>
+                    <span class="color-label">MAGENTA</span>
+                </button>
+                <button class="color-option-btn" data-color="#00ffff">
+                    <span class="color-preview" style="background: #00ffff;"></span>
+                    <span class="color-label">CYAN</span>
+                </button>
+                <button class="color-option-btn" data-color="#ffa500">
+                    <span class="color-preview" style="background: #ffa500;"></span>
+                    <span class="color-label">ORANGE</span>
+                </button>
+                <button class="color-option-btn" data-color="#ffffff">
+                    <span class="color-preview" style="background: #ffffff; border: 2px solid #333;"></span>
+                    <span class="color-label">WHITE</span>
+                </button>
+                <button id="custom-color-btn" class="color-option-btn custom-color-btn">
+                    <span class="color-preview"></span>
+                    <span class="color-label">CUSTOM</span>
+                </button>
+            </div>
+            <input type="color" id="pacman-color" value="#ffff00" style="display: none;">
+            <button id="back-from-color" class="btn btn-secondary" style="margin-top: 20px;">BACK</button>
+        </div>
+        
+    </div>
+    
+    <!-- Difficulty Selection Screen -->
+    <div id="difficulty-screen" class="difficulty-screen" style="display: none;">
+        <div class="difficulty-content">
+            <h2 class="selection-title">CHOOSE DIFFICULTY</h2>
+            <div class="difficulty-options">
+                <button class="difficulty-btn" data-difficulty="easy">EASY</button>
+                <button class="difficulty-btn" data-difficulty="medium">MEDIUM</button>
+                <button class="difficulty-btn" data-difficulty="hard">HARD</button>
+            </div>
+            <button id="back-from-difficulty" class="btn btn-secondary" style="margin-top: 20px;">BACK</button>
+        </div>
+    </div>
+    
+    <!-- Game Screen -->
+    <div id="game-screen" class="game-container" style="display: none;">
+        <div class="score-panel">
+            <div class="score-left">
+                <div class="label">1UP</div>
+                <div class="value" id="score">00</div>
+            </div>
+            <div class="score-center">
+                <div class="label">HIGH SCORE</div>
+                <div class="value" id="high-score">10000</div>
+            </div>
+            <div class="score-right">
+                <div class="label">TIME</div>
+                <div class="value" id="timer">60</div>
+            </div>
+        </div>
+        
+        <canvas id="gameCanvas"></canvas>
+        
+        <!-- Ready Screen -->
+        <div id="ready-screen" class="ready-screen" style="display: none;">
+            <div class="ready-text">READY!</div>
+        </div>
+        
+        <!-- Menu Button -->
+        <button id="menu-btn-game" class="menu-btn-game">MENU</button>
+        <div class="info-panel">
+            <div class="lives">
+                <div class="label">LIVES</div>
+                <div class="lives-icons" id="lives"></div>
+            </div>
+            <div class="bonus-fruit" id="bonus-fruit"></div>
+        </div>
+        
+        <!-- Pause Overlay (Menu) -->
+        <div id="pause-overlay" class="pause-overlay" style="display: none;">
+            <div class="pause-content">
+                <button id="resume-btn" class="btn btn-primary">RESUME</button>
+                <button id="quit-btn" class="btn btn-secondary">QUIT</button>
+            </div>
+        </div>
+        
+        <!-- Quit Confirmation -->
+        <div id="quit-confirm" class="quit-confirm" style="display: none;">
+            <div class="quit-content">
+                <h2>QUIT GAME?</h2>
+                <div class="quit-options">
+                    <button id="quit-yes" class="btn btn-primary">YES</button>
+                    <button id="quit-no" class="btn btn-secondary">NO</button>
+                    <button id="quit-cancel" class="btn btn-secondary">CANCEL</button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Time's Up Message -->
+        <div id="time-up" class="time-up-message">
+            <h2>TIME'S UP!</h2>
+            <p>Final Score: <span id="final-score">0</span></p>
+            <button id="play-again-btn" class="btn btn-primary">PLAY AGAIN</button>
+            <button id="main-menu-btn" class="btn btn-secondary">MAIN MENU</button>
+        </div>
+    </div>
+    
+    <script type="module" src="script.js"></script>
 </body>
 </html>
