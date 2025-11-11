@@ -13,38 +13,37 @@ import { MAZE_LAYOUT, CELL_SIZE, MAZE_WIDTH, MAZE_HEIGHT } from './maze.js';
  * @returns {boolean} True if collision detected
  */
 export function checkWallCollision(x, y, radius) {
-    // Use a smaller collision radius for more forgiving collision detection
-    const collisionRadius = radius * 0.7;
-    
-    // Convert pixel coordinates to grid coordinates
-    const gridX = Math.floor(x / CELL_SIZE);
-    const gridY = Math.floor(y / CELL_SIZE);
-    
-    // Check center point and a few key points
+    // Check multiple points around Pac-Man's circle to prevent going through walls
+    // Check center and 4 cardinal directions
     const checkPoints = [
-        { x: x, y: y }, // center (most important)
-        { x: x + collisionRadius, y: y }, // right
-        { x: x - collisionRadius, y: y }, // left
-        { x: x, y: y + collisionRadius }, // down
-        { x: x, y: y - collisionRadius }, // up
+        { x: x, y: y }, // Center
+        { x: x + radius * 0.7, y: y }, // Right
+        { x: x - radius * 0.7, y: y }, // Left
+        { x: x, y: y + radius * 0.7 }, // Down
+        { x: x, y: y - radius * 0.7 }, // Up
+        // Also check corners
+        { x: x + radius * 0.5, y: y + radius * 0.5 }, // Bottom-right
+        { x: x - radius * 0.5, y: y + radius * 0.5 }, // Bottom-left
+        { x: x + radius * 0.5, y: y - radius * 0.5 }, // Top-right
+        { x: x - radius * 0.5, y: y - radius * 0.5 }, // Top-left
     ];
     
     for (const point of checkPoints) {
-        const gX = Math.floor(point.x / CELL_SIZE);
-        const gY = Math.floor(point.y / CELL_SIZE);
+        const gridX = Math.floor(point.x / CELL_SIZE);
+        const gridY = Math.floor(point.y / CELL_SIZE);
         
         // Check bounds (allow tunnel wrapping)
-        if (gY >= 14 && gY < 15) {
+        if (gridY >= 14 && gridY < 15) {
             // In tunnel row, allow wrapping
-            if (gX < 0 || gX >= MAZE_WIDTH) {
-                continue; // Allow tunnel wrapping
+            if (gridX < 0 || gridX >= MAZE_WIDTH) {
+                continue; // Allow tunnel wrapping, check next point
             }
-        } else if (gX < 0 || gX >= MAZE_WIDTH || gY < 0 || gY >= MAZE_HEIGHT) {
+        } else if (gridX < 0 || gridX >= MAZE_WIDTH || gridY < 0 || gridY >= MAZE_HEIGHT) {
             return true; // Out of bounds
         }
         
         // Check if cell is a wall
-        if (MAZE_LAYOUT[gY] && MAZE_LAYOUT[gY][gX] === 1) {
+        if (MAZE_LAYOUT[gridY] && MAZE_LAYOUT[gridY][gridX] === 1) {
             return true; // Collision with wall
         }
     }
