@@ -54,14 +54,14 @@ export function createPacManVertices(centerX, centerY, radiusX, radiusY, mouthAn
  * Pac-Man class to manage character state and rendering
  */
 export class PacMan {
-    constructor(x, y, radius = 8) {
+    constructor(x, y, radius = 3) { // Classic Pac-Man size (3 pixels radius for 8px cells)
         this.x = x;
         this.y = y;
         this.radius = radius;
         this.direction = 0; // 0 = right, 1 = down, 2 = left, 3 = up
         this.mouthAngle = Math.PI / 3; // Mouth opening angle
         this.mouthAnimation = 0; // Animation counter for mouth opening/closing
-        this.speed = 8; // Fast, smooth movement
+        this.speed = 80; // Movement speed (pixels per second) - will be multiplied by deltaTime
         
         // Customization properties
         this.color = [1.0, 1.0, 0.0, 1.0]; // Yellow (RGBA)
@@ -73,9 +73,10 @@ export class PacMan {
      * Update Pac-Man animation
      */
     update() {
-        // Animate mouth opening/closing
-        this.mouthAnimation += 0.2;
-        this.mouthAngle = Math.PI / 3 + Math.sin(this.mouthAnimation) * (Math.PI / 6);
+        // Animate mouth opening/closing - faster animation
+        this.mouthAnimation += 0.3;
+        // Mouth opens from 0 (closed) to PI/2 (fully open)
+        this.mouthAngle = (Math.PI / 2) * (0.3 + 0.7 * (1 + Math.sin(this.mouthAnimation)) / 2);
     }
     
     /**
@@ -128,9 +129,9 @@ export class PacMan {
     
     /**
      * Get next position based on current direction
-     * @param {number} distance - Distance to move (defaults to speed)
+     * @param {number} distance - Distance to move
      */
-    getNextPosition(distance = this.speed) {
+    getNextPosition(distance) {
         const dx = [distance, 0, -distance, 0][this.direction];
         const dy = [0, distance, 0, -distance][this.direction];
         return {

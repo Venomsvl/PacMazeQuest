@@ -292,7 +292,7 @@ body {
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    background: linear-gradient(135deg, #000 0%, #1a1a2e 50%, #16213e 100%);
+    background: #000; /* Pure black background like classic Pac-Man */
     padding: 15px;
     box-sizing: border-box;
     overflow: hidden;
@@ -304,9 +304,9 @@ body {
     justify-content: space-between;
     width: 100%;
     max-width: 900px;
-    margin-bottom: 10px;
-    font-size: clamp(12px, 1.5vw, 16px);
-    padding: 0 10px;
+    margin-bottom: 5px;
+    font-size: clamp(10px, 1.2vw, 14px);
+    padding: 0 5px;
     box-sizing: border-box;
 }
 
@@ -383,7 +383,7 @@ body {
         0 0 20px rgba(33, 33, 222, 0.5),
         0 0 40px rgba(33, 33, 222, 0.3);
     max-width: 100%;
-    max-height: calc(100vh - 250px);
+    max-height: calc(100vh - 150px);
     width: auto;
     height: auto;
     transition: all 0.3s ease;
@@ -402,9 +402,9 @@ body {
     justify-content: space-between;
     width: 100%;
     max-width: 900px;
-    margin-top: 12px;
-    font-size: clamp(12px, 1.5vw, 16px);
-    padding: 0 10px;
+    margin-top: 5px;
+    font-size: clamp(10px, 1.2vw, 14px);
+    padding: 0 5px;
     box-sizing: border-box;
     position: relative;
     z-index: 10;
@@ -424,34 +424,24 @@ body {
 .life-icon {
     width: clamp(18px, 2vw, 24px);
     height: clamp(18px, 2vw, 24px);
-    background-color: #ffd700;
-    border-radius: 50%;
-    clip-path: polygon(50% 0%, 100% 0%, 100% 50%, 50% 50%, 50% 100%, 0% 100%, 0% 50%, 50% 50%);
-    box-shadow: 
-        0 0 5px #ffd700,
-        0 0 10px rgba(255, 215, 0, 0.5);
-    animation: pulse 2s infinite;
+    background: transparent;
+    border: none;
+    display: block;
+    image-rendering: pixelated;
+    image-rendering: crisp-edges;
 }
 
 .bonus-fruit {
-    width: clamp(25px, 3vw, 35px);
-    height: clamp(25px, 3vw, 35px);
-    background: radial-gradient(circle, #ff0000 0%, #cc0000 100%);
-    border-radius: 50%;
-    margin-top: 20px;
-    box-shadow: 0 0 10px rgba(255, 0, 0, 0.5);
-    border: 2px solid #ffd700;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: clamp(16px, 2vw, 20px);
-}
-
-.bonus-fruit::after {
-    content: '1';
-    color: #fff;
-    font-weight: bold;
-    font-size: clamp(14px, 1.5vw, 18px);
+    gap: 8px;
+    margin-top: 20px;
+    min-width: auto;
+    height: auto;
+    background: transparent;
+    border: none;
+    box-shadow: none;
 }
 
 /* Pause Overlay */
@@ -1053,21 +1043,24 @@ body {
     justify-content: center;
     align-items: center;
     z-index: 400;
-    background: rgba(0, 0, 0, 0.5);
+    background: transparent; /* Transparent so we can see the game behind */
     animation: fadeIn 0.3s;
+    pointer-events: none; /* Allow clicks to pass through */
 }
 
 .ready-text {
     font-size: clamp(48px, 8vw, 96px);
     font-weight: bold;
-    color: #ffd700;
+    color: #ffff00; /* Bright yellow like classic Pac-Man */
     text-shadow: 
-        0 0 20px #ffd700,
-        0 0 40px #ffd700,
-        0 0 60px #ffd700;
+        2px 2px 0px #000,
+        0 0 10px rgba(255, 255, 0, 0.5);
     letter-spacing: 8px;
     animation: pulse 1s infinite;
     text-transform: uppercase;
+    font-family: 'Courier New', monospace;
+    position: relative;
+    top: 10%; /* Position below ghost house area */
 }
 
 /* Menu Button */
