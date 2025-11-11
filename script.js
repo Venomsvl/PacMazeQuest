@@ -7,6 +7,8 @@ import { createShader, createProgram, createBuffer, setRectangle, setCircle } fr
 import { Maze, MAZE_LAYOUT, CELL_SIZE, MAZE_WIDTH, MAZE_HEIGHT, resetMaze } from './src/maze.js';
 import { PacMan, createPacManVertices } from './src/pacman.js';
 import { checkWallCollision, canMove, handleTunnelWrapping, collectPellet } from './src/game.js';
+import { getRedDotPosition, resetRedDot, checkRedDotCollection } from './src/redDot.js';
+import { Ghost, createGhostVertices, createGhosts } from './src/ghost.js';
 
 // WebGL context and program
 const canvas = document.getElementById('gameCanvas');
@@ -73,6 +75,7 @@ let useTextureLocation;
 // Game state
 let maze;
 let pacman;
+let ghosts = []; // Array of ghosts
 let gameRunning = false;
 let gamePaused = false;
 let score = 2770; // Initial score to match the image
@@ -504,22 +507,49 @@ function togglePause() {
  * Restart game
  */
 function restartGame() {
-    // Reset game state
-    gameRunning = true;
+    // Stop any running game loops first
+    gameRunning = false;
     gamePaused = false;
-    score = 2770; // Set to match the image
-    timer = 60;
+    readyScreenShown = false;
     
-    // Clear intervals
-    if (timerInterval) clearInterval(timerInterval);
-    if (animationFrame) cancelAnimationFrame(animationFrame);
+    // Clear intervals and animation frames
+    if (timerInterval) {
+        clearInterval(timerInterval);
+        timerInterval = null;
+    }
+    if (animationFrame) {
+        cancelAnimationFrame(animationFrame);
+        animationFrame = null;
+    }
     
     // Hide overlays
     document.getElementById('pause-overlay').style.display = 'none';
     document.getElementById('time-up').style.display = 'none';
+    document.getElementById('quit-confirm').style.display = 'none';
+    
+    // Reset win message text back to default
+    const timeUpDiv = document.getElementById('time-up');
+    const titleElement = timeUpDiv.querySelector('h2');
+    if (titleElement) {
+        titleElement.textContent = 'TIME\'S UP!';
+    }
+    
+    // Reset game state
+    score = 2770; // Set to match the image
+    timer = 60;
+    cherriesCollected = 1;
+    lastTime = performance.now();
     
     // Reset maze to original state
     resetMaze();
+    
+    // Reset red dot to a new random position
+    resetRedDot();
+    const redDotPos = getRedDotPosition();
+    console.log('Red dot position:', redDotPos);
+    
+    // Reset ghosts based on difficulty
+    ghosts = createGhosts(currentDifficulty);
     
     // Reinitialize Pac-Man with customization
     pacman = new PacMan(14 * CELL_SIZE + CELL_SIZE / 2, 29 * CELL_SIZE + CELL_SIZE / 2, 8);
@@ -530,7 +560,7 @@ function restartGame() {
     updateTimerDisplay();
     updateCherryDisplay();
     
-    // Start game
+    // Start game fresh
     startGame();
 }
 
@@ -543,8 +573,22 @@ function goToMainMenu() {
     gamePaused = false;
     readyScreenShown = false;
     
-    if (timerInterval) clearInterval(timerInterval);
-    if (animationFrame) cancelAnimationFrame(animationFrame);
+    // Clear intervals and animation frames
+    if (timerInterval) {
+        clearInterval(timerInterval);
+        timerInterval = null;
+    }
+    if (animationFrame) {
+        cancelAnimationFrame(animationFrame);
+        animationFrame = null;
+    }
+    
+    // Reset win message text back to default
+    const timeUpDiv = document.getElementById('time-up');
+    const titleElement = timeUpDiv.querySelector('h2');
+    if (titleElement) {
+        titleElement.textContent = 'TIME\'S UP!';
+    }
     
     // Hide game screen, show start screen
     document.getElementById('game-screen').style.display = 'none';
@@ -598,6 +642,15 @@ function startGame() {
     // Reset maze
     resetMaze();
     
+    // Reset red dot to a new random position
+    resetRedDot();
+    const redDotPos = getRedDotPosition();
+    console.log('Red dot position at game start:', redDotPos);
+    
+    // Initialize ghosts based on difficulty
+    ghosts = createGhosts(currentDifficulty);
+    console.log(`Created ${ghosts.length} ghosts for difficulty: ${currentDifficulty}`);
+    
     // Initialize cherry display
     initCherryDisplay();
     
@@ -615,9 +668,9 @@ function startGame() {
         render();
         // Focus canvas for keyboard input
         canvas.focus();
-        // Start rendering loop
+        // Start rendering loop (only if not already running)
         if (!animationFrame) {
-            gameLoop();
+            animationFrame = requestAnimationFrame(gameLoop);
         }
     });
     
@@ -642,7 +695,7 @@ function startTimer() {
 }
 
 /**
- * End the game
+ * End the game (time's up)
  */
 function endGame() {
     gameRunning = false;
@@ -659,6 +712,40 @@ function endGame() {
     if (animationFrame) {
         cancelAnimationFrame(animationFrame);
     }
+}
+
+/**
+ * Win the game (red dot collected)
+ */
+function winGame() {
+    gameRunning = false;
+    gamePaused = false;
+    readyScreenShown = false;
+    
+    // Clear timer
+    if (timerInterval) {
+        clearInterval(timerInterval);
+        timerInterval = null;
+    }
+    
+    // Stop animation frame
+    if (animationFrame) {
+        cancelAnimationFrame(animationFrame);
+        animationFrame = null;
+    }
+    
+    // Show win message
+    const timeUpDiv = document.getElementById('time-up');
+    const finalScoreSpan = document.getElementById('final-score');
+    
+    // Change the message to show win
+    const titleElement = timeUpDiv.querySelector('h2');
+    if (titleElement) {
+        titleElement.textContent = 'YOU WIN!';
+    }
+    
+    finalScoreSpan.textContent = score.toString().padStart(5, '0');
+    timeUpDiv.style.display = 'block';
 }
 
 /**
@@ -680,7 +767,7 @@ function updateScoreDisplay() {
  * Game loop
  */
 function gameLoop() {
-    // Always render (even during ready screen)
+    // Always render (even during ready screen or when game is over)
     render();
     
     // Only update game logic if game is running and not paused
@@ -688,7 +775,7 @@ function gameLoop() {
         update();
     }
     
-    // Continue loop
+    // Continue loop (always keep rendering for UI updates)
     animationFrame = requestAnimationFrame(gameLoop);
 }
 
@@ -745,8 +832,32 @@ function update() {
             updateScoreDisplay();
             updateCherryDisplay();
         }
+        
+        // Check for red dot collection
+        const radius = pacman.getCollisionRadius();
+        if (checkRedDotCollection(pacman.x, pacman.y, radius)) {
+            // Red dot collected! Player wins!
+            score += 100; // Bonus points for collecting red dot
+            updateScoreDisplay();
+            winGame(); // Win the game
+        }
     }
     // If can't move, just stop (no snapping, no bouncing)
+    
+    // Update ghosts (only on medium and hard difficulty)
+    if (ghosts && ghosts.length > 0) {
+        for (const ghost of ghosts) {
+            ghost.update(deltaTime, pacman);
+            
+            // Check collision with Pac-Man
+            const pacmanRadius = pacman.getCollisionRadius();
+            if (ghost.checkCollision(pacman.x, pacman.y, pacmanRadius)) {
+                // Ghost caught Pac-Man - game over!
+                endGame();
+                return;
+            }
+        }
+    }
 }
 
 /**
@@ -850,6 +961,16 @@ function render() {
         drawPacMan();
     }
     
+    // Draw red dot
+    drawRedDot();
+    
+    // Draw ghosts (only on medium and hard difficulty)
+    if (ghosts && ghosts.length > 0) {
+        for (const ghost of ghosts) {
+            drawGhost(ghost);
+        }
+    }
+    
     // Debug: Check for WebGL errors
     const error = gl.getError();
     if (error !== gl.NO_ERROR) {
@@ -907,6 +1028,121 @@ function drawPacMan() {
     gl.deleteBuffer(buffer);
 }
 
+/**
+ * Draw red dot on the maze
+ */
+function drawRedDot() {
+    // Check if WebGL is ready
+    if (!gl || !program || positionLocation === null || positionLocation === -1 || colorLocation === null || colorLocation === -1) {
+        return; // WebGL not ready
+    }
+    
+    // Get red dot position
+    const redDotPos = getRedDotPosition();
+    
+    // Calculate scale and offset to match maze (EXACTLY as in maze.draw - using 0.95 multiplier)
+    const mazeWidth = MAZE_WIDTH * CELL_SIZE;
+    const mazeHeight = MAZE_HEIGHT * CELL_SIZE;
+    const scaleX = canvas.width / mazeWidth;
+    const scaleY = canvas.height / mazeHeight;
+    const scale = Math.min(scaleX, scaleY) * 0.95; // Match maze scale exactly
+    
+    // Center the maze (same as maze.draw)
+    const offsetX = (canvas.width - mazeWidth * scale) / 2;
+    const offsetY = (canvas.height - mazeHeight * scale) / 2;
+    
+    // Convert red dot position to canvas coordinates
+    const canvasX = offsetX + redDotPos.x * scale;
+    const canvasY = offsetY + redDotPos.y * scale;
+    const redDotRadius = Math.max((CELL_SIZE * 0.6) * scale, 3); // Make red dot larger and more visible
+    
+    // Debug: Log first few draws to verify position
+    if (!window.redDotDebugCount) {
+        window.redDotDebugCount = 0;
+    }
+    if (window.redDotDebugCount < 3) {
+        console.log('Drawing red dot:', {
+            mazePos: redDotPos,
+            canvasPos: { x: canvasX, y: canvasY },
+            radius: redDotRadius,
+            scale: scale,
+            offset: { x: offsetX, y: offsetY }
+        });
+        window.redDotDebugCount++;
+    }
+    
+    // Draw red dot as a circle
+    const vertices = setCircle(gl, canvasX, canvasY, redDotRadius, 32);
+    if (!vertices || vertices.length === 0) {
+        return;
+    }
+    
+    const buffer = createBuffer(gl, vertices);
+    if (!buffer) {
+        return;
+    }
+    
+    gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+    gl.enableVertexAttribArray(positionLocation);
+    gl.vertexAttribPointer(positionLocation, 2, gl.FLOAT, false, 0, 0);
+    
+    // Bright red color
+    gl.uniform4f(colorLocation, 1.0, 0.0, 0.0, 1.0);
+    
+    gl.drawArrays(gl.TRIANGLES, 0, vertices.length / 2);
+    
+    // Clean up buffer
+    gl.deleteBuffer(buffer);
+}
+
+/**
+ * Draw ghost on the maze
+ */
+function drawGhost(ghost) {
+    // Check if WebGL is ready
+    if (!gl || !program || positionLocation === null || positionLocation === -1 || colorLocation === null || colorLocation === -1) {
+        return; // WebGL not ready
+    }
+    
+    // Calculate scale and offset to match maze (EXACTLY as in maze.draw - using 0.95 multiplier)
+    const mazeWidth = MAZE_WIDTH * CELL_SIZE;
+    const mazeHeight = MAZE_HEIGHT * CELL_SIZE;
+    const scaleX = canvas.width / mazeWidth;
+    const scaleY = canvas.height / mazeHeight;
+    const scale = Math.min(scaleX, scaleY) * 0.95; // Match maze scale exactly
+    
+    // Center the maze (same as maze.draw)
+    const offsetX = (canvas.width - mazeWidth * scale) / 2;
+    const offsetY = (canvas.height - mazeHeight * scale) / 2;
+    
+    // Convert ghost position to canvas coordinates
+    const canvasX = offsetX + ghost.x * scale;
+    const canvasY = offsetY + ghost.y * scale;
+    const ghostRadius = ghost.radius * scale;
+    
+    // Create ghost vertices
+    const vertices = createGhostVertices(canvasX, canvasY, ghostRadius, 32);
+    if (!vertices || vertices.length === 0) {
+        return;
+    }
+    
+    const buffer = createBuffer(gl, vertices);
+    if (!buffer) {
+        return;
+    }
+    
+    gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+    gl.enableVertexAttribArray(positionLocation);
+    gl.vertexAttribPointer(positionLocation, 2, gl.FLOAT, false, 0, 0);
+    
+    // Set ghost color
+    gl.uniform4f(colorLocation, ghost.color[0], ghost.color[1], ghost.color[2], ghost.color[3]);
+    
+    gl.drawArrays(gl.TRIANGLES, 0, vertices.length / 2);
+    
+    // Clean up buffer
+    gl.deleteBuffer(buffer);
+}
 
 /**
  * Draw a rectangle
